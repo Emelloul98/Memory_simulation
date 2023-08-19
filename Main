@@ -1,0 +1,137 @@
+//exe file:pagenum1pagenum2pagenum3pagenum4pagenum5pagenum6pagenum7pagenum8abcdnum1abcdnum2abcdnum3abcdnum4abcdnum5abcdnum6abcdnum7abcdnum80000000000000000000000000000000000000000000000000000000000000000
+//memory_size: 64
+/*
+ * Text: from 0 to 56
+ * data: from 1024 to 1080
+ * bss: from 2048 to 2104
+ * heap: from 3072 to 3128
+*/
+#include <iostream>
+#include "sim_mem.h"
+char main_memory[MEMORY_SIZE+1];// +1 for the '\0' sign in the end.
+int main()
+{
+    char file1[]="exec_file";
+    char file2[]="swap_file";
+    sim_mem mem(file1,file2,64,64,64,64,8);
+    mem.store(0,'x');// ERR1
+    mem.store(8,'x');// ERR2
+    mem.store(56,'x');// ERR3
+    mem.store(58,'x');// ERR4
+    mem.load(-1);// ERR5
+    mem.load(4097);// ERR6
+    mem.load(3072);//ERR7
+    mem.load(3080);//ERR8
+    mem.load(3128);//ERR9
+    for(int i=0;i<=56;i+=8)
+    {
+        mem.load(i);
+    }
+    /* until this line:
+     * Physical memory: pagenum1,pagenum2.....pagenum8
+     * swap: empty
+     * page_table: 0,1,2,3,4,5,6,7 in the Text,dirty=0,and default values for the rest.
+    */
+    for(int j=1024;j<=1080;j+=8)
+    {
+        mem.store(j,'p');
+        mem.store(j+1,'a');
+        mem.store(j+2,'g');
+        mem.store(j+3,'e');
+    }
+    /* until this line:
+    *  Physical memory: pagenum1,pagenum2.....pagenum8
+    * swap: empty
+    * page_table: 0,1,2,3,4,5,6,7 in the Data frame+dirty=1 and default values for the rest.
+   */
+    for(int k=1080;k>=1024;k-=8)
+    {
+        mem.load(k);
+    }
+    // reversing the Time of the pages in the RAM
+    // All the prints are still the same as before.
+    int num=8;
+    char c;
+    for(int t=2048;t<=2104;t+=8)
+    {
+        c='0'+num;
+        mem.store(t,c);
+        num--;
+    }
+    /* until this line:
+     * Physical memory: 10000000,20000000,30000000,40000000,50000000,60000000,70000000,80000000
+     * swape: pagenum8,pagenum7,pagenum6,pagenum5,pagenum4,pagenum3,pagenum2,pagenum1
+     * page_table:
+     * Text,heap_stack=default
+     * Data.swapIndex = bss.frame = 7,6,5,4,3,2,1,0
+    */
+    num=9;
+    for(int l=3072;l<=3128;l+=8)
+    {
+        c='0'+num;
+        mem.store(l,c);
+        num--;
+    }
+    /* until this line:
+     * Physical memory: 20000000,30000000,40000000,50000000,60000000,70000000,80000000,90000000
+     * swape:
+     * pagenum8,pagenum7,pagenum6,pagenum5,pagenum4,pagenum3,pagenum2,pagenum1,80000000,70000000,60000000,50000000
+     * 40000000,30000000,20000000,10000000
+     * page_table:
+     * Text=default
+     * Data.swapIndex= 7,6,5,4,3,2,1,0
+     * bss.swapIndex= 8,9,10,11,12,13,14,15
+     * heap_stack.frame= 7,6,5,4,3,2,1,0
+     */
+    mem.load(1072);
+    mem.load(1080);
+    /* until this line:
+    * Physical memory: 20000000,30000000,40000000,50000000,60000000,70000000,pagenum8,pagenum7
+    * swape:
+    * 00000000,80000000,pagenum6,pagenum5,pagenum4,pagenum3,pagenum2,pagenum1,80000000,70000000,60000000,50000000
+    * 40000000,30000000,20000000,10000000,90000000
+    * page_table:
+     Valid    Dirty   Frame   Swap index
+    [0]     [0]     [-1]    [-1]
+    [0]     [0]     [-1]    [-1]
+    [0]     [0]     [-1]    [-1]
+    [0]     [0]     [-1]    [-1]
+    [0]     [0]     [-1]    [-1]
+    [0]     [0]     [-1]    [-1]
+    [0]     [0]     [-1]    [-1]
+    [0]     [0]     [-1]    [-1]
+     Valid    Dirty   Frame   Swap index
+    [0]     [1]     [-1]    [7]
+    [0]     [1]     [-1]    [6]
+    [0]     [1]     [-1]    [5]
+    [0]     [1]     [-1]    [4]
+    [0]     [1]     [-1]    [3]
+    [0]     [1]     [-1]    [2]
+    [1]     [1]     [7]     [-1]
+    [1]     [1]     [6]     [-1]
+    Valid    Dirty   Frame   Swap index
+    [0]     [1]     [-1]    [8]
+    [0]     [1]     [-1]    [9]
+    [0]     [1]     [-1]    [10]
+    [0]     [1]     [-1]    [11]
+    [0]     [1]     [-1]    [12]
+    [0]     [1]     [-1]    [13]
+    [0]     [1]     [-1]    [14]
+    [0]     [1]     [-1]    [15]
+
+     Valid    Dirty   Frame   Swap index
+    [0]     [1]     [-1]    [16]
+    [0]     [1]     [-1]    [1]
+    [1]     [1]     [5]     [-1]
+    [1]     [1]     [4]     [-1]
+    [1]     [1]     [3]     [-1]
+    [1]     [1]     [2]     [-1]
+    [1]     [1]     [1]     [-1]
+    [1]     [1]     [0]     [-1]
+    */
+    mem.print_memory();
+    mem.print_swap();
+    mem.print_page_table();
+
+
+}
